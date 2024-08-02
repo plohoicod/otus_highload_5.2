@@ -1,0 +1,53 @@
+version: '3.8'
+services:
+  service-db-shard-1:
+    image: postgres:14.7-alpine
+    networks:
+      - services
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "55432:5432"
+    volumes:
+      - ./infrastructure/db/create_db.sql:/docker-entrypoint-initdb.d/create_db.sql
+      - db-data-1:/var/lib/postgresql/data
+    restart: unless-stopped
+  service-db-shard-2:
+    image: postgres:14.7-alpine
+    networks:
+      - services
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "65432:5432"
+    volumes:
+      - ./infrastructure/db/create_db.sql:/docker-entrypoint-initdb.d/create_db.sql
+      - db-data-2:/var/lib/postgresql/data
+    restart: unless-stopped
+  backend-2:
+    image: backend-client-5.2:0.0.1
+    networks:
+      - services
+    depends_on:
+      - service-db-shard-2
+      - service-db-shard-1
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8081"
+    environment:
+      - SERVER_PORT= 8081
+
+networks:
+  pgnet:
+    external: true
+    name: pgnet
+  services:
+    external: true
+    name: services
+volumes:
+  db-data-1:
+  db-data-2:
